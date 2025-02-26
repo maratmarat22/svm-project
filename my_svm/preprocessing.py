@@ -1,7 +1,9 @@
+from typing import Tuple
+
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.preprocessing import StandardScaler
 
 
 def preprocess(data: DataFrame, target_column: str):
