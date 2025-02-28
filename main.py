@@ -1,38 +1,67 @@
+import numpy as np
+import sklearn.datasets
 from pandas import read_csv
 from sklearn.model_selection import train_test_split
 from my_svm.preprocessing import preprocess
-from my_svm.support_vector_machine import SupportVectorMachine
+from my_svm.support_vector_machine import LinearSVM, KernelSVM
 from my_svm import metrics
-from my_svm.balancing import undersample
+from my_svm import balancing
+from sklearn.datasets import load_iris, load_diabetes
 
 
-import numpy as np
+# noinspection PyPep8Naming
+def main(dataset_file, sep, target_column, balance_pref='none', SVM_type='linear', random_state=0):
+    X, y = preprocess(dataset_file, sep, target_column)
+    #X, y = load_iris(return_X_y=True, as_frame=False)
+    print_unique(y, 'classes counts:')
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=random_state)
+    print_unique(y_train, 'train classes counts:')
 
-def main(dataset_file: str, sep: str, target_column: str, balance_pref: str) -> None:
-    dataset = read_csv(f'data/{dataset_file}', sep=sep)
-    feature_matrix, labels = preprocess(dataset, target_column=target_column)
+    match balance_pref:
+        case 'undersampling':
+            X_train, y_train = balancing.undersample(X_train, y_train, random_state=random_state)
+        case 'oversampling':
+            X_train, y_train = balancing.oversample(X_train, y_train, random_state=random_state)
+        case 'smote':
+            X_train, y_train = balancing.smote(X_train, y_train, random_state=random_state)
+        case 'none':
+            pass
+        case _:
+            raise ValueError(f'no such balance pref: {balance_pref}')
 
-    _, counts = np.unique(labels, return_counts=True)
-    print(f'class counts before balancing: -1 -> {counts[0]}; 1 -> {counts[1]}')
+    print_unique(y_train, f'train classes counts after balancing ({balance_pref}):')
 
-    fm_train, fm_test, l_train, l_test = train_test_split(feature_matrix, labels, test_size=0.25, random_state=27)
+    if SVM_type == 'linear':
+        svm = LinearSVM(epochs=100, C=0.1, learning_rate=0.01, random_state=random_state)
+    elif SVM_type == 'kernel':
+        svm = KernelSVM(epochs=10, C=1, learning_rate=0.00001, gamma=0.1, random_state=random_state)
+    else:
+        raise ValueError(f'no such SVM type: {SVM_type}')
 
-    if balance_pref == 'undersampling':
-        fm_train, l_train = undersample(fm_train, l_train)
+    svm.fit(X_train, y_train)
+    y_pred = svm.predict(X_test)
 
-    _, counts = np.unique(l_train, return_counts=True)
-    print(f'train class counts after balancing: -1 -> {counts[0]}; 1 -> {counts[1]}')
+    # Вывод метрик
+    print('accuracy:', metrics.accuracy(y_test, y_pred))
+    print('precision:', metrics.precision(y_test, y_pred))
+    print('recall:', metrics.recall(y_test, y_pred))
+    print('f1 score:', metrics.f1_score(y_test, y_pred))
+    #print('confusion matrix:')
+    #cm = metrics.confusion_matrix(y_test, y_pred)
+    #for key, val in cm.items():
+    #    print(f'\t{key}: {val}')
 
-    svm = SupportVectorMachine(learning_rate=0.0001, lambda_param=0.01, n_iters=1)
-    svm.fit(fm_train, l_train)
-    l_pred = svm.predict(fm_test)
-
-    print('accuracy:', metrics.accuracy(l_test, l_pred))
-    print('F1 score:', metrics.f1_score(l_test, l_pred))
+def print_unique(y, msg):
+    print(msg)
+    classes, counts = np.unique(y, return_counts=True)
+    for cls, count in zip(classes, counts):
+        print(f'{cls}: {count}')
 
 if __name__ == '__main__':
-    g_dataset_file = 'adult.data' # 'g' stands for 'global'
-    g_sep = ','
-    g_target_column = 'label_ >50K'
-    g_balance_pref = 'none' # undersampling / oversampling / none (default)
-    main(g_dataset_file, g_sep, g_target_column, g_balance_pref)
+    g_dataset_file = 'data/bank.csv' # 'g' stands for 'global'
+    g_sep = ';'
+    g_target_column = 'y'
+    g_balance_pref = 'smote' # undersampling / oversampling / smote / none (default)
+    g_SVM_type = 'kernel'  # linear (default) / kernel
+    g_random_state = 42
+    main(g_dataset_file, g_sep, g_target_column, g_balance_pref, g_SVM_type, g_random_state)

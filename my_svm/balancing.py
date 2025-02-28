@@ -1,18 +1,42 @@
+from collections import Counter
 import numpy as np
+from imblearn.over_sampling import SMOTE
 
-def undersample(feature_matrix, labels):
-    unique_classes, counts = np.unique(labels, return_counts=True)
-    min_count = np.min(counts)
-    resampled_indices = []
+# noinspection PyPep8Naming
+def undersample(X, y, random_state=0):
+    class_counts = Counter(y)
+    min_count = min(class_counts.values())
 
-    for cls in unique_classes:
-        indices = np.where(labels == cls)[0]
-        if len(indices) > min_count:
-            resampled_indices.extend(np.random.choice(indices, min_count, replace=False))
-        else:
-            resampled_indices.extend(indices)
+    X_resampled, y_resampled = [], []
 
-    shuffle_indices = np.arange(len(resampled_indices))
-    np.random.shuffle(shuffle_indices)
+    np.random.seed(random_state)
 
-    return feature_matrix[resampled_indices], labels[resampled_indices]
+    for label in class_counts:
+        indices = np.where(y == label)[0]
+        selected_indices = np.random.choice(indices, min_count, replace=False)
+        X_resampled.extend(X[selected_indices])
+        y_resampled.extend(y[selected_indices])
+
+    return np.array(X_resampled), np.array(y_resampled)
+
+# noinspection PyPep8Naming
+def oversample(X, y, random_state=0):
+    class_counts = Counter(y)
+    max_count = max(class_counts.values())
+
+    X_resampled, y_resampled = [], []
+
+    np.random.seed(random_state)
+
+    for label in class_counts:
+        indices = np.where(y == label)[0]
+        selected_indices = np.random.choice(indices, max_count, replace=True)
+        X_resampled.extend(X[selected_indices])
+        y_resampled.extend(y[selected_indices])
+
+    return np.array(X_resampled), np.array(y_resampled)
+
+# noinspection PyPep8Naming
+def smote(X, y, random_state=0):
+    smote_instance = SMOTE(random_state=random_state)
+    return smote_instance.fit_resample(X, y)
