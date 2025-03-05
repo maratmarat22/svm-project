@@ -1,13 +1,9 @@
 import numpy as np
-import sklearn.datasets
-from pandas import read_csv
 from sklearn.model_selection import train_test_split
 from my_svm.preprocessing import preprocess
 from my_svm.support_vector_machine import LinearSVM, KernelSVM
 from my_svm import metrics
 from my_svm import balancing
-from sklearn.datasets import load_iris, load_diabetes
-
 
 # noinspection PyPep8Naming
 def main(dataset_file, sep, target_column, balance_pref='none', SVM_type='linear', random_state=0):
@@ -32,9 +28,9 @@ def main(dataset_file, sep, target_column, balance_pref='none', SVM_type='linear
     print_unique(y_train, f'train classes counts after balancing ({balance_pref}):')
 
     if SVM_type == 'linear':
-        svm = LinearSVM(epochs=100, C=0.1, learning_rate=0.01, random_state=random_state)
+        svm = LinearSVM(epochs=500, C=0.1, learning_rate=0.001, random_state=random_state)
     elif SVM_type == 'kernel':
-        svm = KernelSVM(epochs=10, C=1, learning_rate=0.00001, gamma=0.1, random_state=random_state)
+        svm = KernelSVM(epochs=10, C=0.1, learning_rate=0.01, gamma=0.1, random_state=random_state)
     else:
         raise ValueError(f'no such SVM type: {SVM_type}')
 
@@ -46,10 +42,10 @@ def main(dataset_file, sep, target_column, balance_pref='none', SVM_type='linear
     print('precision:', metrics.precision(y_test, y_pred))
     print('recall:', metrics.recall(y_test, y_pred))
     print('f1 score:', metrics.f1_score(y_test, y_pred))
-    #print('confusion matrix:')
-    #cm = metrics.confusion_matrix(y_test, y_pred)
-    #for key, val in cm.items():
-    #    print(f'\t{key}: {val}')
+    print('confusion matrix:')
+    cm = metrics.confusion_matrix(y_test, y_pred)
+    for key, val in cm.items():
+        print(f'\t{key}: {val}')
 
 def print_unique(y, msg):
     print(msg)
@@ -58,10 +54,10 @@ def print_unique(y, msg):
         print(f'{cls}: {count}')
 
 if __name__ == '__main__':
-    g_dataset_file = 'data/bank.csv' # 'g' stands for 'global'
+    g_dataset_file = 'data/bank.csv'
     g_sep = ';'
     g_target_column = 'y'
     g_balance_pref = 'smote' # undersampling / oversampling / smote / none (default)
-    g_SVM_type = 'kernel'  # linear (default) / kernel
+    g_SVM_type = 'linear'  # linear (default) / kernel
     g_random_state = 42
     main(g_dataset_file, g_sep, g_target_column, g_balance_pref, g_SVM_type, g_random_state)
